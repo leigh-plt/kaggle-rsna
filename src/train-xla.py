@@ -26,7 +26,12 @@ def set_seeds(seed=7117):
     torch.manual_seed(seed)
 
 def train_loop_fn(model, loader, device, context):
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.FloatTensor([5,7,7,7,7,7]).to(device))
+    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.FloatTensor([5,3,3,3,3,3]).to(device))
+    
+    log_loss = nn.BCEWithLogitsLoss(weight=torch.FloatTensor([2,1,1,1,1,1]).to(device), reduction='none')
+    def metric_fn(outputs, target):
+        return (log_loss(outputs, target).sum(-1) / log_loss.weight.sum()).mean()
+
     optimizer = context.getattr_or(
       'optimizer',
       lambda: torch.optim.AdamW(model.parameters(), lr=args.lr,
@@ -43,7 +48,8 @@ def train_loop_fn(model, loader, device, context):
             min_delta_to_update_lr=args.min_lr,
             num_steps_per_epoch=num_steps_per_epoch))
     
-    score = MovingAverage(maxlen=200)
+    score = MovingAverage(maxlen=500)
+    metric = MovingAverage(maxlen=500)
     model.train()
     for x, (data, target) in loader:
         optimizer.zero_grad()
@@ -52,8 +58,10 @@ def train_loop_fn(model, loader, device, context):
         loss.backward()
         xm.optimizer_step(optimizer)
         score(loss.item())
+        metric(metric_fn(output, target).item())
         if x % args.log_steps == 0:
-            logging.info('[{}]({:5d}) Moving average loss: {:.5f}'.format(device, x, score.mean()))
+            logging.info('[{}]({:5d}) Moving average loss: {:.5f}, metric: {:.5f}'
+                             .format(device, x, score.mean(), metric.mean()))
         if lr_scheduler:
             lr_scheduler.step()
 
@@ -90,7 +98,9 @@ def train():
     # Save weights
     state_dict = model_parallel.models[0].to('cpu').state_dict()
     torch.save(state_dict, args.save_pht)
-    logging.info(' Model saved\n')
+    logging.info('')
+    logging.info('Model saved')
+    logging.info('')
 
 
 parser = argparse.ArgumentParser(description='')
