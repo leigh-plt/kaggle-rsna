@@ -57,7 +57,7 @@ class RSNADataset(D.Dataset):
         image = np.clip(image, image_min, image_max)
 
         # rescale to 0..255
-        image = (image * 255 / width).clip(0, 255).astype(np.uint8)
+        image = ((image - image_min) * 255 / width).clip(0, 255).astype(np.uint8)
         return image
 
     def windows(self, data, interval='BSF'):
