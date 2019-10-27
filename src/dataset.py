@@ -24,7 +24,7 @@ class RSNADataset(D.Dataset):
     def __init__(self, patient, label=None, path='input', transform=None,
                                 size=(512,512), window='Mixed', bins=256):
                     
-        assert window.lower() in ['histogram', 'windows', 'mixed'], 'Unknown windiw type'
+        assert window.lower() in ['histogram', 'windows', 'mixed'], 'Unknown window type'
         self.path = path    
         self.transform = transform if transform else Identity()
         self.patient = patient
@@ -65,10 +65,11 @@ class RSNADataset(D.Dataset):
 
         Argue:
             data: dicom data
-            interval: returned windows, where (type - (center, width)):
-                B - brain (40, 80)
-                S - subdural (80, 200)
-                F - soft (40, 380)
+            interval, string: returned windows, example: 'BS',
+                              where (type - (center, width)):
+                                    B - brain (40, 80)
+                                    S - subdural (80, 200)
+                                    F - soft (40, 380)
         Return:
             Stacked windows
 

@@ -23,8 +23,8 @@ def infer_loop(model, loader, device, context):
     patientid = []
     score = np.empty((0,6))
     model.eval()
-    for x, (data, patient) in loader:
-        output = model(data)   
+    for x, (data, patient) in enumerate(loader):
+        output = model(data)
         patientid += list(patient)
         score = np.concatenate([score, output.detach().cpu().sigmoid().numpy()])
         

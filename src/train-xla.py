@@ -26,9 +26,9 @@ def set_seeds(seed=7117):
     torch.manual_seed(seed)
 
 def train_loop_fn(model, loader, device, context):
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.FloatTensor([5,3,3,3,3,3]).to(device))
+    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.FloatTensor([3,3,3,3,3,5]).to(device))
     
-    log_loss = nn.BCEWithLogitsLoss(weight=torch.FloatTensor([2,1,1,1,1,1]).to(device), reduction='none')
+    log_loss = nn.BCEWithLogitsLoss(weight=torch.FloatTensor([1,1,1,1,1,2]).to(device), reduction='none')
     def metric_fn(outputs, target):
         return (log_loss(outputs, target).sum(-1) / log_loss.weight.sum()).mean()
 
@@ -51,9 +51,10 @@ def train_loop_fn(model, loader, device, context):
     score = MovingAverage(maxlen=500)
     metric = MovingAverage(maxlen=500)
     model.train()
-    for x, (data, target) in loader:
+    for x, (data, target) in enumerate(loader):
         optimizer.zero_grad()
         output = model(data)
+        if args.model_name == 'inception_v3': output = output.logits
         loss = loss_fn(output, target)
         loss.backward()
         xm.optimizer_step(optimizer)
@@ -90,10 +91,11 @@ def train():
 
     num_steps_per_epoch = len(loader) // len(devices)
 
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(1, args.num_epochs + 1):
         start_time = time.time()
         model_parallel(train_loop_fn, loader)
-        logging.info('\nEpoch training time: {:.2f} minutes\n'.format((time.time() - start_time)/60**1))
+        logging.info('')
+        logging.info('Epoch training time: {:.2f} minutes\n'.format((time.time() - start_time)/60**1))
         
     # Save weights
     state_dict = model_parallel.models[0].to('cpu').state_dict()
@@ -107,7 +109,7 @@ parser = argparse.ArgumentParser(description='')
 
 parser.add_argument('--model_name', default='resnet34', type=str, help='Model name from pretrained')
 
-parser.add_argument('--epochs', default=30, type=int, help='Number of training epochs')
+parser.add_argument('--num_epochs', default=30, type=int, help='Number of training epochs')
 parser.add_argument('--batch_size', default=16, type=int, help='Batch size for training')
 parser.add_argument('--num_workers', default=4, type=int, help='Number of wokers for loader')
 parser.add_argument('--num_cores', default=8, type=int, help='Number of cores')
