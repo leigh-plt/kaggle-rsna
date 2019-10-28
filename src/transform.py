@@ -3,14 +3,14 @@ from PIL import Image
 
 train_transforms = T.Compose([
     Image.fromarray,
-    T.ColorJitter(brightness=0.05, contrast=0.05, saturation=0., hue=0.),
+    T.ColorJitter(brightness=0.09, contrast=0.09, saturation=0., hue=0.),
     T.RandomHorizontalFlip(p=0.5),
     T.ToTensor(),
-    T.Normalize(mean=(0.345, 0.323, 0.271), std=(0.225, 0.324, 0.429))
+    T.Normalize(mean=(0.341, 0.162, 0.134), std=(0.312, 0.299, 0.269))
     ])
     
 inference_transforms = T.Compose([
     Image.fromarray,
     T.ToTensor(),
-    T.Normalize(mean=(0.345, 0.323, 0.271), std=(0.225, 0.324, 0.429))
+    T.Normalize(mean=(0.341, 0.162, 0.134), std=(0.312, 0.299, 0.269))
     ])
