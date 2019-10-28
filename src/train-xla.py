@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 import os, time, random, argparse
 
-from dataset import RSNADataset
+from dataset import RSNADataset, RSNAImages
 import schedulers
 from utils import *
 from transform import *
@@ -31,7 +31,8 @@ def train_loop_fn(model, loader, device, context):
     log_loss = nn.BCEWithLogitsLoss(weight=torch.FloatTensor([1,1,1,1,1,2]).to(device), reduction='none')
     def metric_fn(outputs, target):
         return (log_loss(outputs, target).sum(-1) / log_loss.weight.sum()).mean()
-
+    
+    if args.metric_loss: loss_fn = metric_fn
     optimizer = context.getattr_or(
       'optimizer',
       lambda: torch.optim.AdamW(model.parameters(), lr=args.lr,
@@ -83,7 +84,11 @@ def train():
     ## Create dataset and loader    
     patient, label = extract_patient(args.csv_file_path, return_label=True)
     
-    ds = RSNADataset(patient, label, path=args.path, transform=train_transforms)
+    if args.use_image:
+        ds = RSNAImages(patient, label, path=args.path, transform=train_transforms)
+    else:
+        ds = RSNADataset(patient, label, path=args.path, transform=train_transforms)
+        
     loader = D.DataLoader(ds, batch_size=args.batch_size,
                           shuffle=True, num_workers=args.num_workers)
     logging.info('Dataset created\n')
@@ -125,6 +130,9 @@ parser.add_argument('--n_warmup', default=0.25, type=float, help='Number warmup 
 parser.add_argument('--min_lr', default=1e-5, type=float, help='Min delta to update lr')
 
 ## data and log files | variables
+parser.add_argument('--use_image', default=False, type=bool, help='Use converted images as input data ')
+parser.add_argument('--metric_loss', default=False, type=bool, help='Metric as loss function ')
+
 parser.add_argument('--log_steps', default=100, type=int, help='Infor about loss every N steps ')
 parser.add_argument('--log_file', default='train-xla.log', type=str, help='Filename for logs')
 parser.add_argument('--csv_file_path', default='data/stage_1_train.csv', type=str, help='CSV file with labels')

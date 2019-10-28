@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TPU_IP_ADDRESS=10.10.10.2
+TPU_IP_ADDRESS=10.128.19.2
 MODEL_NAME='inception_v3'
 USE_BF16=0
 PATH_DATA=data
@@ -15,7 +15,7 @@ while getopts ":i:m:p:bfr" opt; do
     p) PATH_DATA=$OPTARG ;;
     f) INFERENCE=0;;
     r) TRAIN=0;;
-    
+
   esac
 done
 
@@ -23,12 +23,15 @@ export XLA_USE_BF16=$USE_BF16
 export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
 SAVE_WEIGHTS=checkpoint/model_$MODEL_NAME.pth
 
+# stage_1_train_images path for dicom files
+# train_images path for jpg files
+
 if [ $TRAIN -gt 0 ]
 then
 python src/train-xla.py \
             --model_name $MODEL_NAME \
             --log_file report/$MODEL_NAME-xla.log \
-            --num_epochs 5 \
+            --num_epochs 4 \
             --batch_size 16 \
             --log_steps 500 \
             --num_workers 8 \
@@ -36,16 +39,18 @@ python src/train-xla.py \
             --weight_decay 1e-4 \
             --lr 1e-4 \
             --slr_divisor 5 \
-            --slr_div_epochs 0.85 \
+            --slr_div_epochs 1. \
             --n_warmup 0.15 \
             --min_lr 5e-6 \
             --csv_file_path $PATH_DATA/stage_1_train.csv \
-            --path $PATH_DATA/stage_1_train_images\
+            --path $PATH_DATA/train_images\
+            --use_image True\
+            --metric_loss True\
             --save_pht $SAVE_WEIGHTS
 fi
 
 if [ $INFERENCE -gt 0 ]
-then         
+then
 python src/inference.py \
             --model_name $MODEL_NAME \
             --batch_size 16 \
@@ -54,5 +59,5 @@ python src/inference.py \
             --csv_file_path $PATH_DATA/stage_1_sample_submission.csv \
             --path $PATH_DATA/stage_1_test_images \
             --weight_file $SAVE_WEIGHTS  \
-            --subm_file submissions/submission_$MODEL_NAME.csv   
+            --subm_file submissions/submission_$MODEL_NAME.csv
 fi

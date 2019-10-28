@@ -21,7 +21,7 @@ class Identity():
         return input
 
 class RSNADataset(D.Dataset):
-    def __init__(self, patient, label=None, path='input', transform=None,
+    def __init__(self, patient, label=None, path='data', transform=None,
                                 size=(512,512), window='Mixed', bins=256):
                     
         assert window.lower() in ['histogram', 'windows', 'mixed'], 'Unknown window type'
@@ -126,7 +126,45 @@ class RSNADataset(D.Dataset):
             image = self.mixed(data)
 
         ## apply resize for standartize image resolution
-        if image.shape != (512,512):
+        if image.shape != self.size:
+            image = cv2.resize(image, self.size, interpolation = cv2.INTER_AREA)
+ 
+        return image
+        
+    def __getitem__(self, index):
+        """ Return Image and Label or Image and ParientID if label is None """
+        
+        image = self.image(index)
+        image = self.transform(image)
+
+        if self.label is not None:
+            return image, self.label[index].astype(np.float32)
+        else:
+            return image, self.patient[index]
+            
+    def __len__(self):
+        """
+        Total number of samples in the dataset
+        """
+        return self.len
+    
+class RSNAImages(D.Dataset):
+    def __init__(self, patient, label=None, path='data', transform=None, size=(512,512)):
+
+        self.path = path    
+        self.transform = transform if transform else Identity()
+        self.patient = patient
+        self.label = label
+        self.len = len(self.patient)
+        self.size = size
+
+    def image(self, index):
+        
+        """ Load and resize images """
+        image = cv2.imread(os.path.join(self.path, self.patient[index] + '.jpg'), 1)
+
+        ## apply resize for standartize image resolution
+        if image.shape != self.size:
             image = cv2.resize(image, self.size, interpolation = cv2.INTER_AREA)
  
         return image
