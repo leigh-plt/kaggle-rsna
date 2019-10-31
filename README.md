@@ -14,3 +14,7 @@ $ sh ./script/runner.sh -m densenet169
 ## Prestage (optinal)
 
 Model trained with converted dicom files to jpg with python script `src/images.py`, without converting change in `./script/runner.sh` flag train on image to `False`
+
+## Submit
+
+Final submit mean value of 4 models
